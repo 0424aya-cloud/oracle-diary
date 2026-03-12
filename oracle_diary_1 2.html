@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="オラクル日記">
+  <meta name="theme-color" content="#1a0533">
+  <title>✦ オラクル日記 ✦</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Noto+Serif+JP:wght@300;400;600&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d0118;
+      --bg2: #1a0533;
+      --bg3: #2d0a5e;
+      --accent: #c8a96e;
+      --accent2: #e8c98e;
+      --text: #f0e8d8;
+      --text-dim: #a89880;
+      --card-bg: linear-gradient(135deg, #1e0640 0%, #2d0a5e 50%, #1a0533 100%);
+      --glow: rgba(200,169,110,0.3);
+      --radius: 16px;
+      --shadow: 0 8px 40px rgba(0,0,0,0.6);
+    }
+    .light-theme {
+      --bg: #f5efe6; --bg2: #ede3d5; --bg3: #e0d0bc;
+      --accent: #8b5e3c; --accent2: #a0724d;
+      --text: #2d1f0e; --text-dim: #7a5c3e;
+      --card-bg: linear-gradient(135deg, #ede3d5 0%, #e0cdb5 50%, #d4bc9c 100%);
+      --glow: rgba(139,94,60,0.2);
+      --shadow: 0 8px 40px rgba(0,0,0,0.15);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      min-height: 100%; font-family: 'Noto Serif JP', serif;
+      background: var(--bg); color: var(--text);
+      overflow-x: hidden; transition: background 0.4s, color 0.4s;
+    }
+    #stars-canvas {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 0; opacity: 0.6;
+    }
+    .light-theme #stars-canvas { opacity: 0.08; }
+    #app {
+      position: relative; z-index: 1;
+      max-width: 480px; margin: 0 auto;
+      padding: 0 0 100px 0; min-height: 100vh;
+    }
+
+    /* HEADER */
+    header { text-align: center; padding: 32px 20px 16px; position: relative; }
+    .header-title {
+      font-family: 'Cinzel Decorative', cursive;
+      font-size: clamp(1.1rem, 5vw, 1.5rem);
+      color: var(--accent); letter-spacing: 0.05em;
+      text-shadow: 0 0 20px var(--glow); line-height: 1.4;
+    }
+    .header-subtitle {
+      font-family: 'IM Fell English', serif; font-style: italic;
+      font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;
+    }
+    .header-controls {
+      position: absolute; top: 28px; right: 16px;
+      display: flex; gap: 8px; align-items: center;
+    }
+    .toggle-btn {
+      background: none; border: 1px solid var(--accent);
+      color: var(--accent); border-radius: 20px;
+      padding: 4px 12px; font-size: 0.7rem; cursor: pointer;
+      transition: all 0.3s; font-family: 'Noto Serif JP', serif;
+    }
+    .toggle-btn:hover { background: var(--accent); color: var(--bg); }
+
+    /* SECTIONS */
+    .section { display: none; padding: 20px 16px; }
+    .section.active { display: block; }
+    .section-label {
+      font-size: 0.65rem; color: var(--text-dim); letter-spacing: 0.15em;
+      font-family: 'IM Fell English', serif; font-style: italic; margin-bottom: 12px;
+    }
+
+    /* ORACLE */
+    .draw-mode-selector { display: flex; gap: 8px; margin-bottom: 20px; justify-content: center; }
+    .mode-btn {
+      padding: 8px 16px; border-radius: 20px;
+      border: 1px solid var(--accent); background: none;
+      color: var(--accent); font-size: 0.75rem; cursor: pointer;
+      transition: all 0.3s; font-family: 'Noto Serif JP', serif;
+    }
+    .mode-btn.active { background: var(--accent); color: var(--bg); }
+    .draw-btn {
+      display: block; width: 100%; padding: 16px;
+      background: linear-gradient(135deg, var(--bg3), var(--bg2));
+      border: 1px solid var(--accent); border-radius: var(--radius);
+      color: var(--accent2); font-family: 'Cinzel Decorative', cursive;
+      font-size: 0.9rem; cursor: pointer; transition: all 0.4s;
+      letter-spacing: 0.1em; box-shadow: var(--shadow);
+      position: relative; overflow: hidden;
+    }
+    .draw-btn::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(circle at 50% 120%, var(--glow) 0%, transparent 70%);
+      opacity: 0; transition: opacity 0.4s;
+    }
+    .draw-btn:hover::before, .draw-btn:active::before { opacity: 1; }
+    .draw-btn:active { transform: scale(0.98); }
+    .cards-container {
+      display: flex; gap: 12px; margin-top: 20px;
+      justify-content: center; flex-wrap: wrap;
+    }
+    .oracle-card {
+      flex: 1; min-width: 120px; max-width: 160px;
+      background: var(--card-bg); border-radius: var(--radius);
+      border: 1px solid rgba(200,169,110,0.4);
+      padding: 16px 12px; text-align: center;
+      box-shadow: var(--shadow), 0 0 20px var(--glow);
+      animation: cardReveal 0.6s ease forwards;
+      opacity: 0; transform: translateY(20px) rotateY(10deg);
+    }
+    .oracle-card.single { max-width: 240px; flex: none; padding: 24px 20px; }
+    @keyframes cardReveal { to { opacity: 1; transform: translateY(0) rotateY(0); } }
+    .card-icon { font-size: 2.5rem; margin-bottom: 8px; }
+    .card-name {
+      font-family: 'Cinzel Decorative', cursive; font-size: 0.65rem;
+      color: var(--accent); letter-spacing: 0.08em; margin-bottom: 6px; line-height: 1.4;
+    }
+    .card-name-ja { font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 8px; line-height: 1.4; }
+    .card-message { font-size: 0.72rem; color: var(--text-dim); line-height: 1.6; font-style: italic; }
+    .card-position { font-size: 0.6rem; color: var(--accent); margin-bottom: 6px; font-family: 'IM Fell English', serif; font-style: italic; }
+    #cardSaveMsg { text-align:center; margin-top:12px; font-size:0.75rem; color:var(--text-dim); display:none; }
+
+    /* DIARY */
+    .date-display {
+      text-align: center; padding: 8px;
+      font-family: 'IM Fell English', serif; font-style: italic;
+      color: var(--accent); font-size: 1rem; margin-bottom: 12px;
+    }
+    .today-cards-summary {
+      background: rgba(200,169,110,0.08); border: 1px solid rgba(200,169,110,0.2);
+      border-radius: var(--radius); padding: 12px; margin-bottom: 14px;
+      font-size: 0.78rem; color: var(--text-dim); line-height: 1.7; display:none;
+    }
+    .today-cards-summary strong { color: var(--accent); }
+    .diary-input {
+      width: 100%; min-height: 140px;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(200,169,110,0.3);
+      border-radius: var(--radius); padding: 14px; color: var(--text);
+      font-family: 'Noto Serif JP', serif; font-size: 0.9rem;
+      line-height: 1.8; resize: none; transition: border-color 0.3s;
+    }
+    .light-theme .diary-input { background: rgba(255,255,255,0.5); }
+    .diary-input:focus { outline: none; border-color: var(--accent); }
+    .diary-input::placeholder { color: var(--text-dim); }
+    .save-btn {
+      display: block; width: 100%; margin-top: 12px; padding: 12px;
+      background: none; border: 1px solid var(--accent); border-radius: var(--radius);
+      color: var(--accent); font-family: 'Noto Serif JP', serif;
+      font-size: 0.85rem; cursor: pointer; transition: all 0.3s;
+    }
+    .save-btn:hover { background: var(--accent); color: var(--bg); }
+
+    /* CALENDAR */
+    .calendar-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+    }
+    .cal-nav {
+      background: none; border: 1px solid var(--accent); color: var(--accent);
+      width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1rem;
+      transition: all 0.3s; display: flex; align-items: center; justify-content: center;
+    }
+    .cal-nav:hover { background: var(--accent); color: var(--bg); }
+    .cal-month { font-family: 'Cinzel Decorative', cursive; font-size: 0.9rem; color: var(--accent); }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+    .cal-dow { text-align: center; font-size: 0.6rem; color: var(--text-dim); padding: 4px 0; font-family: 'IM Fell English', serif; }
+    .cal-day {
+      aspect-ratio: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      border-radius: 8px; cursor: pointer; font-size: 0.75rem;
+      transition: all 0.2s; position: relative; padding: 2px;
+      background: none; border: none; color: var(--text);
+    }
+    .cal-day:hover { background: rgba(200,169,110,0.15); }
+    .cal-day.today { border: 1px solid var(--accent); color: var(--accent); }
+    .cal-day.has-entry { color: var(--accent2); }
+    .cal-day.has-entry::after { content: '✦'; position: absolute; bottom: 2px; font-size: 0.45rem; color: var(--accent); }
+    .cal-day.other-month { color: var(--text-dim); opacity: 0.3; }
+    .cal-day.selected { background: rgba(200,169,110,0.2); }
+    .entry-preview {
+      margin-top: 20px; padding: 16px;
+      background: rgba(200,169,110,0.06); border: 1px solid rgba(200,169,110,0.2);
+      border-radius: var(--radius); min-height: 60px;
+    }
+    .entry-preview-date { font-size: 0.7rem; color: var(--accent); font-family: 'IM Fell English', serif; font-style: italic; margin-bottom: 8px; }
+    .entry-preview-text { font-size: 0.85rem; line-height: 1.8; color: var(--text); }
+    .entry-preview-cards { font-size: 0.7rem; color: var(--text-dim); margin-top: 8px; }
+    .entry-empty { color: var(--text-dim); font-size: 0.8rem; font-style: italic; }
+    .csv-btn {
+      display: block; width: 100%; margin-top: 16px; padding: 12px;
+      background: none; border: 1px solid rgba(200,169,110,0.4); border-radius: var(--radius);
+      color: var(--text-dim); font-family: 'Noto Serif JP', serif; font-size: 0.8rem;
+      cursor: pointer; transition: all 0.3s;
+    }
+    .csv-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
+      background: var(--bg3); border: 1px solid var(--accent);
+      color: var(--accent); padding: 10px 24px; border-radius: 20px;
+      font-size: 0.8rem; z-index: 100; opacity: 0;
+      transition: opacity 0.3s; pointer-events: none; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+
+    /* BOTTOM NAV */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 480px;
+      background: var(--bg2); border-top: 1px solid rgba(200,169,110,0.2);
+      display: flex; z-index: 50;
+    }
+    .bottom-nav-item {
+      flex: 1; padding: 10px 4px; text-align: center; cursor: pointer;
+      transition: color 0.3s; color: var(--text-dim); font-size: 0.6rem;
+      background: none; border: none; font-family: 'Noto Serif JP', serif;
+    }
+    .bottom-nav-item .nav-icon { font-size: 1.3rem; display: block; margin-bottom: 2px; }
+    .bottom-nav-item.active { color: var(--accent); }
+  </style>
+</head>
+<body>
+<canvas id="stars-canvas"></canvas>
+<div id="app">
+  <header>
+    <div class="header-title">✦ Oracle Diary ✦</div>
+    <div class="header-subtitle">オラクルカード日記</div>
+    <div class="header-controls">
+      <button class="toggle-btn" id="langToggle" onclick="toggleLang()">EN</button>
+      <button class="toggle-btn" id="themeToggle" onclick="toggleTheme()">☀</button>
+    </div>
+  </header>
+
+  <!-- Oracle -->
+  <div id="sec-oracle" class="section active">
+    <div class="section-label" id="lbl-draw-mode">引き方を選ぶ</div>
+    <div class="draw-mode-selector">
+      <button class="mode-btn active" onclick="setMode('single')" id="mode-single">1枚引き</button>
+      <button class="mode-btn" onclick="setMode('random')" id="mode-random">ランダム</button>
+      <button class="mode-btn" onclick="setMode('three')" id="mode-three">3枚引き</button>
+    </div>
+    <button class="draw-btn" onclick="drawCards()" id="drawBtn">✦ カードをめくる ✦</button>
+    <div class="cards-container" id="cardsContainer"></div>
+    <div id="cardSaveMsg"></div>
+  </div>
+
+  <!-- Diary -->
+  <div id="sec-diary" class="section">
+    <div class="date-display" id="diaryDateDisplay"></div>
+    <div class="today-cards-summary" id="todayCardsSummary"></div>
+    <div class="section-label" id="lbl-diary-write">今日の一言</div>
+    <textarea class="diary-input" id="diaryInput" placeholder="今日はどんな日でしたか…"></textarea>
+    <button class="save-btn" onclick="saveDiary()" id="saveBtn">✦ 保存する</button>
+  </div>
+
+  <!-- Calendar -->
+  <div id="sec-calendar" class="section">
+    <div class="calendar-header">
+      <button class="cal-nav" onclick="changeMonth(-1)">‹</button>
+      <div class="cal-month" id="calMonthLabel"></div>
+      <button class="cal-nav" onclick="changeMonth(1)">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="entry-preview" id="entryPreview">
+      <div class="entry-empty" id="lbl-select-day">日付を選んで記録を確認</div>
+    </div>
+    <button class="csv-btn" onclick="exportCSV()" id="csvBtn">⬇ CSVでダウンロード</button>
+  </div>
+</div>
+
+<nav class="bottom-nav">
+  <button class="bottom-nav-item active" onclick="showSection('oracle',this)">
+    <span class="nav-icon">🔮</span>
+    <span id="nav-lbl-oracle">オラクル</span>
+  </button>
+  <button class="bottom-nav-item" onclick="showSection('diary',this)">
+    <span class="nav-icon">📖</span>
+    <span id="nav-lbl-diary">日記</span>
+  </button>
+  <button class="bottom-nav-item" onclick="showSection('calendar',this)">
+    <span class="nav-icon">🗓</span>
+    <span id="nav-lbl-calendar">カレンダー</span>
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CARDS = [
+  { icon:'🌟', en:'The Star',       ja:'星',       msg_ja:'希望の光があなたを照らしています。前へ進む勇気を持って。',         msg_en:'Starlight guides your path. Move forward with hope.' },
+  { icon:'🌙', en:'The Moon',       ja:'月',       msg_ja:'直感を信じてください。夢の中にヒントが隠れています。',             msg_en:'Trust your intuition. Wisdom hides within your dreams.' },
+  { icon:'☀️', en:'The Sun',        ja:'太陽',     msg_ja:'喜びと成功があなたのもとへ。明るい未来が広がっています。',         msg_en:'Joy and success are yours. A bright future unfolds.' },
+  { icon:'🌹', en:'The Rose',       ja:'薔薇',     msg_ja:'愛を開いて受け取る時。美しさの中に真実があります。',               msg_en:'Open your heart to love. Truth lives in beauty.' },
+  { icon:'🦋', en:'Transformation', ja:'変容',     msg_ja:'変化を恐れないで。脱皮の先に新しい自分が待っています。',           msg_en:'Embrace change without fear. Your new self awaits.' },
+  { icon:'🌊', en:'The Wave',       ja:'波',       msg_ja:'感情の流れに身を任せて。抵抗をやめる時が来ました。',               msg_en:'Surrender to the flow. Release resistance now.' },
+  { icon:'🔥', en:'Sacred Flame',   ja:'聖なる炎', msg_ja:'内なる情熱を燃やして。あなたの炎は世界を照らします。',             msg_en:'Fan your inner flame. Your passion lights the world.' },
+  { icon:'🌿', en:'The Forest',     ja:'森',       msg_ja:'大地とつながって。自然の中に答えがあります。',                     msg_en:'Connect to the earth. Nature holds your answer.' },
+  { icon:'🦅', en:'The Eagle',      ja:'鷲',       msg_ja:'高い視点から物事を見てください。全体像が見えてきます。',           msg_en:'See from higher ground. The bigger picture reveals itself.' },
+  { icon:'💎', en:'The Crystal',    ja:'水晶',     msg_ja:'あなたの本質は透き通るように純粋です。それを信じて。',             msg_en:'Your essence is crystal clear. Trust what you truly are.' },
+  { icon:'🌺', en:'Blossoming',     ja:'開花',     msg_ja:'今がまさに花開く時。あなたの才能を世に示して。',                   msg_en:'Now is your time to bloom. Show your gifts to the world.' },
+  { icon:'⚡', en:'Lightning',      ja:'雷光',     msg_ja:'突然のひらめきが来ます。行動のタイミングを逃さないで。',           msg_en:'A sudden insight arrives. Do not miss the moment to act.' },
+  { icon:'🕊️', en:'Peace',         ja:'平和',     msg_ja:'内なる平和を選んでください。手放すことで軽くなれます。',           msg_en:'Choose inner peace. Let go and feel lighter.' },
+  { icon:'🌈', en:'Rainbow Bridge', ja:'虹橋',     msg_ja:'試練の後に祝福が来ます。橋を渡る勇気を持って。',                   msg_en:'After trials come blessings. Have courage to cross the bridge.' },
+  { icon:'🐉', en:'The Dragon',     ja:'龍',       msg_ja:'大きな力があなたの中に眠っています。今こそ目覚めの時。',           msg_en:'Great power sleeps within you. Now is the time to awaken.' },
+  { icon:'🌻', en:'Sunflower',      ja:'向日葵',   msg_ja:'光の方へ顔を向けて。ポジティブな視点が道を開きます。',             msg_en:'Turn your face toward the light. Positivity opens the way.' },
+  { icon:'🍃', en:'New Beginnings', ja:'新芽',     msg_ja:'新しいスタートへの準備ができています。種を蒔く時です。',           msg_en:'You are ready for a fresh start. Time to plant new seeds.' },
+  { icon:'🔮', en:'The Oracle',     ja:'神託',     msg_ja:'あなた自身が答えを知っています。内なる声に耳を傾けて。',           msg_en:'You already know the answer. Listen to your inner voice.' },
+  { icon:'🐬', en:'Joy & Play',     ja:'喜遊',     msg_ja:'喜びと遊び心を取り戻して。魂の軽さを忘れないで。',                 msg_en:'Reclaim your joy and playfulness. Keep lightness in your soul.' },
+  { icon:'🌙✨',en:'Magic Hour',    ja:'魔法の刻', msg_ja:'今この瞬間が魔法に満ちています。意識を今ここへ。',                 msg_en:'This very moment is full of magic. Be here, be now.' },
+  { icon:'🧘', en:'Inner Temple',   ja:'内なる宮', msg_ja:'静寂の中に帰ってください。あなたの聖域はいつもそこに。',           msg_en:'Return to stillness. Your inner temple is always there.' },
+  { icon:'🌱', en:'Patience',       ja:'忍耐',     msg_ja:'根が張られています。まだ見えなくても成長は続いています。',         msg_en:'Roots are forming. Growth continues even when unseen.' },
+  { icon:'💫', en:'Miracle',        ja:'奇跡',     msg_ja:'奇跡はあなたの近くにいます。期待して受け取る準備を。',             msg_en:'A miracle is near you. Be open and ready to receive.' },
+  { icon:'🦁', en:'Courage',        ja:'勇気',     msg_ja:'心の奥の勇気を呼び覚ませ。あなたは思っている以上に強い。',         msg_en:'Awaken the courage in your heart. You are stronger than you know.' },
+  { icon:'🌌', en:'Infinite Self',  ja:'無限の自己',msg_ja:'あなたは宇宙と繋がる無限の存在です。それを思い出して。',          msg_en:'You are infinite, connected to the cosmos. Remember this truth.' },
+];
+
+const POS_JA = ['過去','現在','未来'];
+const POS_EN = ['Past','Present','Future'];
+
+let lang = 'ja', theme = 'dark', drawMode = 'single';
+let calYear, calMonth, selectedCalDate = null;
+let todayDrawnCards = [];
+
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+
+function getEntries() {
+  try { return JSON.parse(localStorage.getItem('oracle_entries') || '{}'); } catch { return {}; }
+}
+function saveEntry(date, text, cards) {
+  const e = getEntries();
+  e[date] = { text, cards: cards || [] };
+  localStorage.setItem('oracle_entries', JSON.stringify(e));
+}
+
+// Stars
+function initStars() {
+  const canvas = document.getElementById('stars-canvas');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  function resize() {
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    stars = Array.from({length:100}, () => ({
+      x: Math.random()*canvas.width, y: Math.random()*canvas.height,
+      r: Math.random()*1.5+0.3, a: Math.random(), da: (Math.random()-0.5)*0.005
+    }));
+  }
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    stars.forEach(s => {
+      s.a += s.da; if(s.a<=0||s.a>=1) s.da*=-1;
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle = `rgba(245,230,200,${s.a})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', resize); resize(); draw();
+}
+
+function toggleLang() {
+  lang = lang==='ja'?'en':'ja';
+  document.getElementById('langToggle').textContent = lang==='ja'?'EN':'JA';
+  updateTexts();
+}
+function toggleTheme() {
+  theme = theme==='dark'?'light':'dark';
+  document.body.classList.toggle('light-theme', theme==='light');
+  document.getElementById('themeToggle').textContent = theme==='dark'?'☀':'🌙';
+}
+function updateTexts() {
+  const ja = lang==='ja';
+  document.getElementById('lbl-draw-mode').textContent = ja?'引き方を選ぶ':'Choose draw mode';
+  document.getElementById('mode-single').textContent = ja?'1枚引き':'1 Card';
+  document.getElementById('mode-random').textContent = ja?'ランダム':'Random';
+  document.getElementById('mode-three').textContent = ja?'3枚引き':'3 Cards';
+  document.getElementById('drawBtn').textContent = ja?'✦ カードをめくる ✦':'✦ Draw Cards ✦';
+  document.getElementById('lbl-diary-write').textContent = ja?'今日の一言':"Today's Note";
+  document.getElementById('diaryInput').placeholder = ja?'今日はどんな日でしたか…':"How was your day...";
+  document.getElementById('saveBtn').textContent = ja?'✦ 保存する':'✦ Save';
+  document.getElementById('csvBtn').textContent = ja?'⬇ CSVでダウンロード':'⬇ Download CSV';
+  document.getElementById('nav-lbl-oracle').textContent = ja?'オラクル':'Oracle';
+  document.getElementById('nav-lbl-diary').textContent = ja?'日記':'Diary';
+  document.getElementById('nav-lbl-calendar').textContent = ja?'カレンダー':'Calendar';
+  document.getElementById('lbl-select-day').textContent = ja?'日付を選んで記録を確認':'Select a date to view entry';
+  renderCalendar(); updateDiarySummary();
+}
+
+function showSection(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='diary') initDiary();
+  if(name==='calendar') renderCalendar();
+}
+
+function setMode(mode) {
+  drawMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('mode-'+mode).classList.add('active');
+}
+
+function drawCards() {
+  const container = document.getElementById('cardsContainer');
+  container.innerHTML = '';
+  const msg = document.getElementById('cardSaveMsg');
+  msg.style.display = 'none';
+
+  let count = drawMode==='three' ? 3 : drawMode==='random' ? Math.floor(Math.random()*3)+1 : 1;
+  let pool = [...CARDS], picked = [];
+  for(let i=0;i<count;i++) {
+    const idx = Math.floor(Math.random()*pool.length);
+    picked.push(pool.splice(idx,1)[0]);
+  }
+
+  todayDrawnCards = picked.map((c,i) => ({
+    icon:c.icon,
+    name: lang==='ja'?c.ja:c.en,
+    position: count===3?(lang==='ja'?POS_JA[i]:POS_EN[i]):null,
+    msg: lang==='ja'?c.msg_ja:c.msg_en
+  }));
+
+  picked.forEach((card,i) => {
+    const el = document.createElement('div');
+    el.className = 'oracle-card'+(count===1?' single':'');
+    el.style.animationDelay = `${i*0.15}s`;
+    el.innerHTML = `
+      ${count===3?`<div class="card-position">${lang==='ja'?POS_JA[i]:POS_EN[i]}</div>`:''}
+      <div class="card-icon">${card.icon}</div>
+      <div class="card-name">${card.en}</div>
+      <div class="card-name-ja">${card.ja}</div>
+      <div class="card-message">${lang==='ja'?card.msg_ja:card.msg_en}</div>`;
+    container.appendChild(el);
+  });
+
+  const today = todayStr();
+  const entries = getEntries();
+  const existing = entries[today] || {text:'', cards:[]};
+  saveEntry(today, existing.text, todayDrawnCards);
+  msg.textContent = lang==='ja'?'今日のカードとして保存しました ✦':"Saved as today's cards ✦";
+  msg.style.display = 'block';
+  updateDiarySummary();
+}
+
+function initDiary() {
+  const today = todayStr();
+  const d = new Date();
+  const mJa = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  const mEn = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('diaryDateDisplay').textContent = lang==='ja'
+    ? `${d.getFullYear()}年 ${mJa[d.getMonth()]} ${d.getDate()}日`
+    : `${mEn[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  const entries = getEntries();
+  document.getElementById('diaryInput').value = entries[today]?.text || '';
+  updateDiarySummary();
+}
+
+function updateDiarySummary() {
+  const today = todayStr();
+  const entries = getEntries();
+  const cards = entries[today]?.cards;
+  const el = document.getElementById('todayCardsSummary');
+  if(cards && cards.length) {
+    el.innerHTML = `<strong>${lang==='ja'?'今日のカード：':"Today's cards: "}</strong>${cards.map(c=>c.icon+' '+c.name).join('　')}`;
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function saveDiary() {
+  const today = todayStr();
+  const text = document.getElementById('diaryInput').value.trim();
+  const entries = getEntries();
+  saveEntry(today, text, entries[today]?.cards || []);
+  showToast(lang==='ja'?'保存しました ✦':'Saved ✦');
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const now = new Date();
+  if(calYear===undefined) { calYear=now.getFullYear(); calMonth=now.getMonth(); }
+  const mJa=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  const mEn=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  document.getElementById('calMonthLabel').textContent = lang==='ja'
+    ? `${calYear}年 ${mJa[calMonth]}` : `${mEn[calMonth]} ${calYear}`;
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+  const dows = lang==='ja'?['日','月','火','水','木','金','土']:['Su','Mo','Tu','We','Th','Fr','Sa'];
+  dows.forEach(d => { const el=document.createElement('div'); el.className='cal-dow'; el.textContent=d; grid.appendChild(el); });
+
+  const entries = getEntries();
+  const startDow = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const prevDays = new Date(calYear, calMonth, 0).getDate();
+  const todayKey = todayStr();
+
+  for(let i=0;i<42;i++) {
+    const el = document.createElement('button');
+    el.className = 'cal-day';
+    let dateKey, displayNum;
+    if(i < startDow) {
+      displayNum = prevDays - startDow + i + 1;
+      const d = new Date(calYear, calMonth-1, displayNum);
+      dateKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      el.classList.add('other-month');
+    } else if(i >= startDow + daysInMonth) {
+      displayNum = i - startDow - daysInMonth + 1;
+      const d = new Date(calYear, calMonth+1, displayNum);
+      dateKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      el.classList.add('other-month');
+    } else {
+      displayNum = i - startDow + 1;
+      dateKey = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(displayNum).padStart(2,'0')}`;
+    }
+    el.textContent = displayNum;
+    if(dateKey===todayKey) el.classList.add('today');
+    if(entries[dateKey]?.text) el.classList.add('has-entry');
+    if(dateKey===selectedCalDate) el.classList.add('selected');
+    el.addEventListener('click', () => selectCalDay(dateKey, el));
+    grid.appendChild(el);
+  }
+}
+
+function changeMonth(dir) {
+  calMonth += dir;
+  if(calMonth>11){calMonth=0;calYear++;} if(calMonth<0){calMonth=11;calYear--;}
+  renderCalendar();
+}
+
+function selectCalDay(dateKey, el) {
+  selectedCalDate = dateKey;
+  document.querySelectorAll('.cal-day').forEach(d => d.classList.remove('selected'));
+  el.classList.add('selected');
+  const entries = getEntries();
+  const entry = entries[dateKey];
+  const [y,m,d] = dateKey.split('-');
+  const mJa=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  const mEn=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const dateLabel = lang==='ja'
+    ? `${y}年${parseInt(m)}月${parseInt(d)}日`
+    : `${mEn[parseInt(m)-1]} ${parseInt(d)}, ${y}`;
+  const preview = document.getElementById('entryPreview');
+  if(entry && (entry.text || entry.cards?.length)) {
+    let html = `<div class="entry-preview-date">${dateLabel}</div>`;
+    if(entry.text) html += `<div class="entry-preview-text">${entry.text}</div>`;
+    if(entry.cards?.length) html += `<div class="entry-preview-cards">${entry.cards.map(c=>c.icon+' '+c.name).join('　')}</div>`;
+    preview.innerHTML = html;
+  } else {
+    preview.innerHTML = `<div class="entry-preview-date">${dateLabel}</div><div class="entry-empty">${lang==='ja'?'記録なし':'No entry'}</div>`;
+  }
+}
+
+function exportCSV() {
+  const entries = getEntries();
+  const rows = [['Date','Diary','Cards']];
+  Object.keys(entries).sort().forEach(date => {
+    const e = entries[date];
+    rows.push([date, e.text||'', (e.cards||[]).map(c=>c.name).join(', ')]);
+  });
+  const csv = rows.map(r => r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = `oracle_diary_${todayStr()}.csv`; a.click();
+  showToast(lang==='ja'?'CSVをダウンロードしました':'CSV downloaded');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+// Init
+initStars();
+const now = new Date(); calYear=now.getFullYear(); calMonth=now.getMonth();
+initDiary();
+</script>
+</body>
+</html>
